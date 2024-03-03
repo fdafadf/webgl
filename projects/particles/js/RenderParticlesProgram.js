@@ -1,9 +1,9 @@
 // @ts-check
 import * as WebGL2 from "../../../js/webgl2/index.js";
 /**
- * @extends {WebGL2.ShaderProgram<typeof RenderProgram.AttributesModel, typeof RenderProgram.UniformsModel>}
+ * @extends {WebGL2.ShaderProgram<typeof RenderParticlesProgram.AttributesModel, typeof RenderParticlesProgram.UniformsModel>}
  */
-export class RenderProgram extends WebGL2.ShaderProgram
+export class RenderParticlesProgram extends WebGL2.ShaderProgram
 {
     /** @type {{ position: 'vec3' }} */
     static AttributesModel = { position: 'vec3' };
@@ -30,6 +30,6 @@ export class RenderProgram extends WebGL2.ShaderProgram
      */
     constructor(gl)
     {
-        super(gl, RenderProgram.AttributesModel, {}, RenderProgram.Vertex_Shader_Source, RenderProgram.Fragment_Shader_Source);
+        super(gl, RenderParticlesProgram.AttributesModel, {}, RenderParticlesProgram.Vertex_Shader_Source, RenderParticlesProgram.Fragment_Shader_Source);
     }
 }

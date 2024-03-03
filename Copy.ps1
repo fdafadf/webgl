@@ -1,0 +1,2 @@
+Copy-Item -Path $PSScriptRoot\projects\particles -Destination $PSScriptRoot\..\three\projects -Recurse -Force
+Copy-Item -Path $PSScriptRoot\js\webgl2 -Destination $PSScriptRoot\..\three\js -Recurse -Force
