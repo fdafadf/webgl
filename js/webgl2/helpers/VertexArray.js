@@ -18,7 +18,6 @@ export class VertexArray
         return { handle }
     }
 }
-
 export class VertexArrayBuilder
 {
     /**
@@ -28,6 +27,17 @@ export class VertexArrayBuilder
     {
         this.gl = gl;
         this.handle = gl.createVertexArray();
+        this.gl.bindVertexArray(this.handle);
+    }
+    /**
+     * @template TAttributesModel
+     * @param {Attribute2<TAttributesModel>} name
+     * @param {[number, number][]} data 
+     * @param {import('./../ShaderProgram.js').ShaderProgram<TAttributesModel, any>} program 
+     */
+    createBoundBufferWithData2(name, data, program)
+    {
+        this._createBoundBufferWithData(2, data.flat(), program.attribute_locations[name]);
     }
     /**
      * @template TAttributesModel
@@ -35,14 +45,9 @@ export class VertexArrayBuilder
      * @param {[number, number, number][]} data 
      * @param {import('./../ShaderProgram.js').ShaderProgram<TAttributesModel, any>} program 
      */
-    bindBufferWithData(name, data, program)
+    createBoundBufferWithData3(name, data, program)
     {
-        let gl = this.gl;
-        let buffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data.flat()), gl.STATIC_DRAW);
-        gl.enableVertexAttribArray(program.attribute_locations[name]);
-        gl.vertexAttribPointer(program.attribute_locations[name], 3, gl.FLOAT, false, 0, 0);
+        this._createBoundBufferWithData(3, data.flat(), program.attribute_locations[name]);
     }
     /**
      * @template TAttributesModel
@@ -69,5 +74,19 @@ export class VertexArrayBuilder
         gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
         gl.enableVertexAttribArray(program.attribute_locations[name]);
         gl.vertexAttribPointer(program.attribute_locations[name], 3, gl.FLOAT, false, 0, 0);
+    }
+    /**
+     * @param {number} size
+     * @param {number[]} data 
+     * @param {number} attribute_location
+     */
+    _createBoundBufferWithData(size, data, attribute_location)
+    {
+        let gl = this.gl;
+        let buffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(attribute_location);
+        gl.vertexAttribPointer(attribute_location, size, gl.FLOAT, false, 0, 0);
     }
 }

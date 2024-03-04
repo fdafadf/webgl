@@ -112,7 +112,6 @@ export class PheromoneParticleSimulation extends WebGL2.Project
 
         // parametersAnimation();
     }
-
     /**
      * @param {number} count 
      * @returns 
