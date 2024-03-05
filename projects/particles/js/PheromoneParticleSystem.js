@@ -16,10 +16,10 @@ export class PheromoneParticleSystem
         this.count = 0;
         this.context = context;
         this.parameters = parameters;
-        this.update_program = new UpdateParticlesProgram(context, parameters.movement_model.value);
+        this.update_program = new UpdateParticlesProgram(context, parameters.movement_model.value, parameters.space_model.value);
         this.smell_buffer = context.createBuffer();
         if (!this.smell_buffer) throw new Error();
-        this.pheromone_map = new PheromoneMap(context, parameters.blur_type.value);
+        this.pheromone_map = new PheromoneMap(context, parameters.blur_type.value, parameters.space_model.value);
         this.vertex_arrays = { input: this._createUpdateProgramVertexArray(), output: this._createUpdateProgramVertexArray() };
         this.draw_program = new DrawParticlesProgram(context);
         this.render_program = new RenderParticlesProgram(context);

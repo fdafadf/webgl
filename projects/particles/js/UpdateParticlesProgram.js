@@ -14,6 +14,7 @@ export class UpdateParticlesProgram extends WebGL2.ShaderProgram
     static UniformsModel = { VelocityScale: 'float', ViewingDistance: 'float', RotateL: 'mat2', RotateR: 'mat2' };
     static Vertex_Shader_Source = `#version 300 es
         #define MOVEMENT_MODEL_{movement_model}
+        #define SPACE_MODEL_{space_model}
         precision mediump float;
         uniform float VelocityScale;
         uniform float ViewingDistance;
@@ -83,8 +84,14 @@ export class UpdateParticlesProgram extends WebGL2.ShaderProgram
         {
             vec2 scaledVelocity = VelocityScale * velocity;
             outPosition = position + scaledVelocity;
+            outVelocity = velocity;
+            #ifdef SPACE_MODEL_C
             outVelocity.x = outPosition.x < -1.0 || outPosition.x > 1.0 ? -velocity.x : velocity.x;
             outVelocity.y = outPosition.y < -1.0 || outPosition.y > 1.0 ? -velocity.y : velocity.y;
+            #endif
+            #ifdef SPACE_MODEL_T
+            outPosition = mod(outPosition + 1.0, 2.0) - 1.0;
+            #endif
             vec2 uv = (position.xy + 1.0) * 0.5;
             // vec4 f0 = texture(Screen, uv + normalize(velocity) * ViewingDistance);
             // vec4 f1 = texture(Screen, uv + normalize(velocity * LOOK_L) * ViewingDistance);
@@ -114,10 +121,13 @@ export class UpdateParticlesProgram extends WebGL2.ShaderProgram
     /**
      * @param {WebGL2RenderingContext} gl 
      * @param {MovementModel} movement_model
+     * @param {import('./ParametersPanel.js').SpaceModel} space_model
      */
-    constructor(gl, movement_model)
+    constructor(gl, movement_model, space_model)
     {
-        let vertex_shader_source = UpdateParticlesProgram.Vertex_Shader_Source.replace('{movement_model}', movement_model.toUpperCase());
+        let vertex_shader_source = UpdateParticlesProgram.Vertex_Shader_Source;
+        vertex_shader_source = vertex_shader_source.replace('{movement_model}', movement_model.toUpperCase());
+        vertex_shader_source = vertex_shader_source.replace('{space_model}', space_model.toUpperCase());
         super(gl, UpdateParticlesProgram.AttributesModel, UpdateParticlesProgram.UniformsModel, vertex_shader_source, UpdateParticlesProgram.Fragment_Shader_Source, [ 'outPosition', 'outVelocity' ]);
     }
     /**

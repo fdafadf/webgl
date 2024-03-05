@@ -39,18 +39,15 @@ async function onWindowLoad()
     controls_placeholder.appendChild(project.control_panel.element);
     let random_button = controls_placeholder.appendChild(Object.assign(document.createElement('button'), { innerText: "Ustaw parametry losowo" }));
     random_button.addEventListener('click', () => project.setRandomParameters());
-
     let parameter_sets_container = document.createElement('span');
     parameter_sets_container.id = 'parameter-sets';
     controls_placeholder.appendChild(parameter_sets_container);
-    
     Parameter_Sets.forEach((url, i) => 
     {
         let button = Object.assign(document.createElement('button'), { innerText: `${i}` });
         button.addEventListener('click', () => window.location.href = url);
         parameter_sets_container.appendChild(button);
     });
-    
     await project.run();
 }
 window.addEventListener('load', onWindowLoad);

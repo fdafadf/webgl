@@ -93,7 +93,7 @@ export class UpdatePheromoneProgram extends WebGL2.ShaderProgram
         void main()
         {
             vec2 uv = gl_FragCoord.xy / 768.0;
-            color = vec4(gaussian(uv) * PheromoneDecayFactor - 0.0001, 1.0);
+            color = vec4(gaussian(uv) * PheromoneDecayFactor - 0.00001, 1.0);
         }
     `;
     /**

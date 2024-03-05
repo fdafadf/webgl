@@ -7,12 +7,14 @@ export class PheromoneMap
     /**
      * @param {WebGL2RenderingContext} gl
      * @param {import('./UpdatePheromoneProgram.js').BlurType} blur_type
+     * @param {import('./ParametersPanel.js').SpaceModel} space_model
      */
-    constructor(gl, blur_type)
+    constructor(gl, blur_type, space_model)
     {
+        let texture_parameters = { repeat: space_model == 't' };
         this.gl = gl;
-        this.input = new WebGL2.TexturedFramebuffer(gl);
-        this.output = new WebGL2.TexturedFramebuffer(gl);
+        this.input = new WebGL2.TexturedFramebuffer(gl, texture_parameters);
+        this.output = new WebGL2.TexturedFramebuffer(gl, texture_parameters);
         this.program = new UpdatePheromoneProgram(gl, blur_type);
         this.render_plane = WebGL2Helpers.VertexArray.createVertexArray3(gl, this.program, WebGL2.Geometry.createRectangleVertices());
         gl.clearColor(0.0, 0.0, 0.0, 1.0);

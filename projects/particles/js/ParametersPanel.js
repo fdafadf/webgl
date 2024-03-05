@@ -1,17 +1,22 @@
 // @ts-check
+import { TexturedFramebuffer } from "../../../js/webgl2/TexturedFramebuffer.js";
 import { SelectControl } from "./SelectControl.js";
 /**
  * @typedef { 'particles_count' | 'pheromone_decay_factor' | 'step_size' | 'direction_change_angle' | 'viewing_distance' | 'emission_intensity' } NumberParameter
- * @typedef { 'color_blending' | 'pheromones_model' | 'start_state' | 'blur_type' | 'movement_model' } StringParameter
+ * @typedef { 'color_blending' | 'pheromones_model' | 'start_state' | 'blur_type' | 'movement_model' | 'start_pheromone_distribution' | 'space_model' } StringParameter
  * @typedef { 'show_pheromones' } BooleanParameter
  * @typedef { 'fc' | 'mr' | 'c' | 'r' } StartState
+ * @typedef { 'r' | 'c10' | 'c2' } StartPheromoneDistribution
  * @typedef { 'r01' | '1of3' | 'b' } SmellFunction
- * @typedef { 'argb' | 's' | 'sn' } PheromonesModel
+ * @typedef { 'argb' | 's' | 'sn' | 'afrgb' } PheromonesModel
  * @typedef { '0' | '' | 'b' } ColorBlending
+ * @typedef { 'c' | 't' } SpaceModel
  * @typedef { Record<NumberParameter, { value: number, changed: boolean }> 
  * & Record<BooleanParameter, { value: boolean, changed: boolean }> 
  * & Record<StringParameter, { value: string, changed: boolean }>
  * & { start_state: { value: StartState, changed: boolean } }
+ * & { space_model: { value: SpaceModel, changed: boolean } }
+ * & { start_pheromone_distribution: { value: StartPheromoneDistribution, changed: boolean } }
  * & { movement_model: { value: import('./UpdateParticlesProgram').MovementModel, changed: boolean } }
  * & { blur_type: { value: import('./UpdatePheromoneProgram.js').BlurType, changed: boolean } }
  * & { pheromones_model: { value: PheromonesModel, changed: boolean } } } Parameters
@@ -19,14 +24,17 @@ import { SelectControl } from "./SelectControl.js";
 export class ParametersPanel
 {
     static Color_Blending = { 0: { name: 'Disabled' }, 'a': { name: 'SRC_ALPHA' } };
-    static Pheromones_Model = { 'argb': { name: 'Antagonistyczne RGB' }, 's': { name: 'Pojedynczy' } }; // , 'sn': { name: 'Pojedynczy + neutralny' }
+    static Space_Model = { 'c': { name: 'Zamknięty' }, 't': { name: 'Torus' } };
+    static Pheromones_Model = { 'argb': { name: 'Antagonistyczne RGB' }, 's': { name: 'Pojedynczy' }, 'afrgb': { name: 'RG-RB-GB' } }; // , 'sn': { name: 'Pojedynczy + neutralny' }
     static Start_State = { 'mr': { name: 'Pierścień z ruchem do centrum' }, 'fc': { name: 'Pełne koło z ruchem do centrum' }, 'c': { name: 'Obwód koła z ruchem do centrum' }, 'r': { name: 'Losowo' } };
     static Movement_Model = { 'simple2': { name: 'Dwupunktowy.' }, 'simple3': { name: 'Trójpunktowy' }, 'simple5': { name: 'Pięciopunktowy' } };
     static Blur_Type = { 'off': { name: 'Brak rozpraszania' }, '3': { name: 'Gaussian 3x3' }, '5': { name: 'Gaussian 5x5' } };
+    static Start_Pheromone_Distribution = { 'r': { name: 'Losowa' }, 'c10': { name: '10 okregów na feromon' }, 'c2': { name: '2 okregi na feromon' } };
     /** @type {Parameters} */
     static Defaults = 
     {
         particles_count: { value: 100000, changed: true },
+        space_model: { value: 'c', changed: true },
         pheromone_decay_factor: { value: 0.97, changed: true },
         step_size: { value: 1.7, changed: true },
         direction_change_angle: { value: 5, changed: true }, // 1313131345364123
@@ -38,6 +46,7 @@ export class ParametersPanel
         start_state: { value: 'mr', changed: true },
         movement_model: { value: 'simple5', changed: true },
         blur_type: { value: 'off', changed: true },
+        start_pheromone_distribution: { value: 'r', changed: true },
     };
     constructor()
     {
@@ -48,7 +57,9 @@ export class ParametersPanel
         this.controls =
         {
             particles_count: this._createInputNumberControl({ name: 'particles_count', short_name: 'pc', title: 'Liczba cząsteczek' }),
+            space_model: this._addRowWithSelectControl({ name: 'space_model', short_name: 'sm', title: 'Model przestrzeni', items: ParametersPanel.Space_Model, comment: 'Wymaga ponownego uruchomienia strony.' }),
             start_state: this._addRowWithSelectControl({ name: 'start_state', short_name: 's', title: 'Stan początkowy', items: ParametersPanel.Start_State }),
+            start_pheromone_distribution: this._addRowWithSelectControl({ name: 'start_pheromone_distribution', short_name: 'spd', title: 'Początkowa dystrybucja', items: ParametersPanel.Start_Pheromone_Distribution }),
             pheromones_model: this._addRowWithSelectControl({ name: 'pheromones_model', short_name: 'pm', title: 'Model feromonów', items: ParametersPanel.Pheromones_Model }),
             // this.smell_function = this._createInputTextControl({ name: 'smell_function', short_name: 'sf', title: 'Model feromonów' }, { disabled: 'disabled' });
             pheromone_decay_factor: this._createInputNumberControl({ name: 'pheromone_decay_factor', short_name: 'pdf', title: 'Współczynnik zanikania feromonu' }, { step: 0.001 }),
@@ -67,25 +78,40 @@ export class ParametersPanel
         this.reset_button.addEventListener('click', () => this.reset = true);
         this.controls.particles_count.elements.td_value.appendChild(this.reset_button);
 
-        this.link = this._addRow('Link do bieżących ustawień', '');
-        // @ts-ignore
-        this.link.td_value.parentElement.colSpan = 2;
-        // @ts-ignore
-        this.link.td_value.parentElement.id = 'link';
+        this.link = this._addTwoColumnsRow('Link do bieżących ustawień');
+        this.link.td_value.classList.add('small');
         this.link_a = document.createElement('a');
         this.link.td_value.appendChild(this.link_a);
         // this.link.td_value.addEventListener('click', () => navigator.clipboard.writeText(this.link.td_value.innerText));
         this._updateLink();
+        
+        this.autodetected_parameters = this._addTwoColumnsRow('Parametry automatyczne');
+        this.autodetected_parameters.td_value.classList.add('small');
+        this.autodetected_parameters.td_value.innerText = `Format tekstur: ${TexturedFramebuffer.Texture_Format}`;
     }
     /**
-     * @returns {(index: number) => [number, number, number]}
+     * @returns {(index: number, positions: number[], velocities: number[]) => [number, number, number]}
      */
     getPheromonesModelFunction()
     {
+        /**
+         * @param {[number, number, number][]} colors
+         * @param {number} circle_count
+         * @returns {(index: number, positions: number[], velocities: number[]) => [number, number, number]}
+         */
+        function createCircleFunction(colors, circle_count)
+        {
+            return (i, positions) =>
+            {
+                let x = positions[i * 2 + 0];
+                let y = positions[i * 2 + 1];
+                let l = Math.sqrt(x * x + y * y);
+                return colors[Math.round(l * colors.length * circle_count) % colors.length];
+            }
+        }
         switch (this.parameters.pheromones_model.value)
         {
             case 's': 
-                /** @type {[number, number, number][]} */
                 return () => [1, 1, 1];
             // case 'b': 
             //     /** @type {[number, number, number][]} */
@@ -93,10 +119,22 @@ export class ParametersPanel
             // case 'r01': 
             //     /** @type {[number, number, number][]} */
             //     return () => [Math.random(), 0, 1];
-            case 'argb': 
+            case 'afrgb': 
+            {
                 /** @type {[number, number, number][]} */
-                let colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
-                return i => colors[i % 3];
+                const colors = [[1, 1, 0], [0, 1, 1], [1, 0, 1]];
+                if (this.parameters.start_pheromone_distribution.value == 'c10') return createCircleFunction(colors, 10);
+                if (this.parameters.start_pheromone_distribution.value == 'c2') return createCircleFunction(colors, 2);
+                return (i, positions) => colors[i % 3];
+            }
+            case 'argb':
+            {
+                /** @type {[number, number, number][]} */
+                const colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1]];
+                if (this.parameters.start_pheromone_distribution.value == 'c10') return createCircleFunction(colors, 10);
+                if (this.parameters.start_pheromone_distribution.value == 'c2') return createCircleFunction(colors, 2);
+                return (i, positions) => colors[i % 3];
+            }
             default: return () => [0, 0, 1];
         }
     }
@@ -225,12 +263,24 @@ export class ParametersPanel
         let td_label = tr.appendChild(Object.assign(document.createElement('td'), { innerText: title }));
         /** @type {HTMLTableCellElement} */
         let td_value = tr.appendChild(Object.assign(document.createElement('td')));
-        td_value = td_value.appendChild(Object.assign(document.createElement('div')));
+        if (td_value_child) 
+        {
+            td_value = td_value.appendChild(Object.assign(document.createElement('div')));
+            td_value.appendChild(td_value_child);
+        }
         /** @type {HTMLTableCellElement} */
         let td_comment = tr.appendChild(Object.assign(document.createElement('td'), { innerText: comment }));
         td_comment.classList.add('comment');
-        if (td_value_child) td_value.appendChild(td_value_child);
         this.element.appendChild(tr);
         return { tr, td_label, td_value, td_comment };
+    }
+    /**
+     * @param {string} title
+     */
+    _addTwoColumnsRow(title)
+    {
+        let row = this._addRow(title, '');
+        row.td_value.colSpan = 2;
+        return row;
     }
 }

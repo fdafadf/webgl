@@ -7,6 +7,7 @@ export class PheromoneParticleSimulation extends WebGL2.Project
     constructor()
     {
         super();
+        WebGL2.TexturedFramebuffer.initialize(this.context);
         this.control_panel = new ParametersPanel();
         this.particles = new PheromoneParticleSystem(this.context, this.control_panel.parameters);
     }
@@ -125,8 +126,13 @@ export class PheromoneParticleSimulation extends WebGL2.Project
         {
             for (let i = 0, a = 0; i < count; i++)
             {
-                positions.push(Math.sin(a) * Math.random() * 0.8);
-                positions.push(Math.cos(a) * Math.random() * 0.8);
+                let r = 0.8 * Math.sqrt(Math.random());
+                let theta = Math.random() * 2 * Math.PI;
+                let x = r * Math.cos(theta);
+                let y = r * Math.sin(theta);
+                positions.push(x, y);
+                // positions.push(Math.sin(a) * Math.random() * 0.8);
+                // positions.push(Math.cos(a) * Math.random() * 0.8);
                 a += d;
             }
         }
@@ -188,7 +194,7 @@ export class PheromoneParticleSimulation extends WebGL2.Project
         let smell_function = this.control_panel.getPheromonesModelFunction();
         for (let i = 0; i < count; i++)
         {
-            smell.push(...smell_function(i));
+            smell.push(...smell_function(i, positions, velocities));
         }
         return { positions, velocities, smell, count };
     }
